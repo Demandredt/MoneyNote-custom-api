@@ -1,1 +1,9 @@
-rootProject.name = 'moneynote-api'
+
+pluginManagement {
+    rootProject.name = 'moneynote-api'
+    repositories {
+        maven { url 'https://maven.aliyun.com/repository/gradle-plugin' } // 阿里云插件镜像
+        maven { url 'https://maven.aliyun.com/repository/public' }        // 覆盖默认插件仓库
+        gradlePluginPortal() // 作为备用
+    }
+}

@@ -12,6 +12,10 @@ java {
 }
 
 repositories {
+	maven {
+		url 'https://maven.aliyun.com/repository/public/'
+	}
+	mavenLocal()
 	mavenCentral()
 }
 
@@ -38,5 +42,6 @@ dependencies {
 	implementation 'com.auth0:java-jwt:4.2.1'
 	implementation 'org.apache.poi:poi:5.2.2'
 	implementation 'org.apache.poi:poi-ooxml:5.2.2'
+	implementation 'com.volcengine:volcengine-java-sdk-ark-runtime:0.1.157'
 
 }

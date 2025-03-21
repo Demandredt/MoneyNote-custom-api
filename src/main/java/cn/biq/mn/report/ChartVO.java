@@ -12,4 +12,8 @@ public class ChartVO {
     private BigDecimal y;
     private BigDecimal percent;
 
+    @Override
+    public String toString() {
+        return x+":"+y+"元，占比"+percent+"%\n";
+    }
 }
