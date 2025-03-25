@@ -37,3 +37,4 @@ out/
 
 *.env
 .metadata
+src/main/resources/application-sensitive.yml
