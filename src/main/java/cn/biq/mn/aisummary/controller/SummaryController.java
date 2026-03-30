@@ -1,25 +1,17 @@
 package cn.biq.mn.aisummary.controller;
 
-import cn.biq.mn.aisummary.model.SummaryRequest;
 import cn.biq.mn.aisummary.service.SummaryService;
 import cn.biq.mn.aisummary.utils.AiSummaryUtil;
-import cn.biq.mn.book.BookDetails;
-import cn.biq.mn.book.BookQueryForm;
 import cn.biq.mn.book.BookService;
 import cn.biq.mn.response.BaseResponse;
-import cn.biq.mn.response.DataMessageResponse;
 import cn.biq.mn.response.DataResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 
 @RestController
@@ -56,18 +48,41 @@ public class SummaryController {
 //        查询时间，目前默认一个月内
         try {
             String summaryResponse =
-                    aiSummaryUtil.getSummary(
-                            summaryService.getBillStat(
-                                    id,
-                                    System.currentTimeMillis() - 2678400000L,
-                                    System.currentTimeMillis()));
+                    summaryService.startAISummary(summaryService.getBillStat(
+                            id,
+                            System.currentTimeMillis() - 2678400000L,
+                            System.currentTimeMillis()));
 
 
-            return new DataResponse<String>(summaryResponse);
+            ObjectMapper mapper = new ObjectMapper();
+            String content = "";
+            try {
+                JsonNode root = mapper.readTree(summaryResponse);
+                content = root.get("content").asText();
+            }catch (JsonProcessingException e){
+                //todo 解析错误重试
+            }
+            return new DataResponse<String>(content);
         }catch (Exception e){
             System.err.println("ERRORLLLL:::");
             e.printStackTrace();
             throw e;
         }
+    }
+
+    @PostMapping("/intelligentAdd")
+    public BaseResponse getIntelligentAdd(@RequestBody String rawRequest){
+        //暂定直接传全文以及账本id
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode jsonNode = mapper.readTree(rawRequest);
+            int bookId = jsonNode.get("bookId").asInt();
+            String input = jsonNode.get("input").asText();
+            summaryService.intelligentAddBalanceFlow(input,bookId);
+        }catch (Exception e){
+            e.printStackTrace();
+
+        }
+        return new DataResponse<String>("done");
     }
 }

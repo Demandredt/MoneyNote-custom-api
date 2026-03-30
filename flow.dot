@@ -1,0 +1,56 @@
+digraph MoneyNoteModules {
+rankdir=TB;
+graph [
+	fontname="Microsoft YaHei",
+	fontsize=12,
+	label="基于AI的智能记账项目流程图",
+	labelloc=t,
+	bgcolor="#ffffff",
+	splines=ortho,
+	ranksep=0.7,
+	nodesep=0.45
+];
+node [
+	shape=box,
+	style="rounded,filled",
+	fontname="Microsoft YaHei",
+	fontsize=10,
+	color="#4a4a4a",
+	fillcolor="#f7f9fc",
+	width=3.2,
+	margin="0.24,0.14"
+];
+edge [fontname="Microsoft YaHei", fontsize=9, color="#666666", arrowsize=0.7];
+
+Platform [label="平台层\nSpring Boot API", fillcolor="#e8f4ff"];
+
+Core [label="核心支撑层\n鉴权与会话 | 统一响应 | 异常处理 | 通用基础能力", fillcolor="#fff3d9"];
+
+Domain [label="业务模块层", fillcolor="#eaf7ea"];
+Asset [label="资产与账户", fillcolor="#f3fbf3"];
+Bookkeeping [label="记账流水", fillcolor="#f3fbf3"];
+Dimension [label="分类/标签/交易对象", fillcolor="#f3fbf3"];
+Org [label="用户与分组", fillcolor="#f3fbf3"];
+Stat [label="报表统计", fillcolor="#f3fbf3"];
+
+AI [label="AI 智能模块\n账单分析 | 智能记账", fillcolor="#ffe9ef"];
+
+Data [label="数据层\nRepository + JPA/Querydsl", fillcolor="#efe7ff"];
+Storage [label="存储层\nMySQL", fillcolor="#f7f2ff"];
+
+Platform -> Core;
+Core -> Domain;
+Core -> AI;
+Domain -> Data;
+AI -> Data;
+Data -> Storage;
+
+Domain -> Asset;
+Domain -> Bookkeeping;
+Domain -> Dimension;
+Domain -> Org;
+Domain -> Stat;
+
+AI -> Stat [style=dashed, label="消费统计能力"];
+AI -> Bookkeeping [style=dashed, label="写入记账流水"];
+}

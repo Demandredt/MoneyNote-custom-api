@@ -1,22 +1,28 @@
 package cn.biq.mn.aisummary.service;
 
+import cn.biq.mn.account.AccountQueryForm;
 import cn.biq.mn.account.AccountService;
+import cn.biq.mn.aisummary.utils.AiSummaryUtil;
 import cn.biq.mn.balanceflow.*;
 import cn.biq.mn.base.BaseService;
 import cn.biq.mn.book.Book;
 import cn.biq.mn.book.BookRepository;
 import cn.biq.mn.category.CategoryType;
+import cn.biq.mn.payee.PayeeQueryForm;
+import cn.biq.mn.payee.PayeeService;
 import cn.biq.mn.report.CategoryReportQueryForm;
 import cn.biq.mn.report.ChartVO;
 import cn.biq.mn.report.ReportService;
-import cn.biq.mn.response.DataResponse;
 import cn.biq.mn.user.User;
 import cn.biq.mn.utils.MessageSourceUtil;
 import cn.biq.mn.utils.SessionUtil;
 import cn.biq.mn.utils.WebUtils;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -41,6 +47,10 @@ public class SummaryService {
     @Autowired
     private AccountService accountService;
     @Autowired
+    private PayeeService payeeService;
+    @Autowired
+    private BalanceFlowService balanceFlowService;
+    @Autowired
     private  BaseService baseService;
     @Autowired
     private MessageSourceUtil messageSourceUtil;
@@ -52,6 +62,14 @@ public class SummaryService {
 
     @Autowired
     private BookRepository bookRepository;
+
+    @Autowired
+    private BillAnalysis billAnalysis;
+
+
+    @Autowired
+    private AddBalance addBalance;
+
 
 
     /**
@@ -222,7 +240,14 @@ public class SummaryService {
         return reportBuilder.toString();
     }
 
-    // 以下是新增的辅助方法
+
+    /**
+     * 调用ai开始分析
+     * @return
+     */
+    public String startAISummary(String userPrompt) {
+        return billAnalysis.analysis(AiSummaryUtil.getSummarySystemPrompt(), userPrompt);
+    }
     private void appendField(StringBuilder builder, String label, String value) {
         builder.append("  ")
                 .append(label).append(": ")
@@ -243,5 +268,55 @@ public class SummaryService {
         SimpleDateFormat sdf = new SimpleDateFormat(pattern);
         sdf.setTimeZone(TimeZone.getTimeZone(ZoneId.ofOffset("GMT", ZoneOffset.ofHours(timeZoneOffset))));
         return sdf.format(date);
+    }
+
+
+
+    /*
+    智能记账部分
+     */
+
+    /**
+     * 智能记账
+     * @param input
+     * @return
+     */
+    public boolean intelligentAddBalanceFlow(String input,Integer currentBookId) {
+        AccountQueryForm accountQueryForm = new AccountQueryForm();
+        accountQueryForm.setEnable(true);
+        StringBuilder sb = new StringBuilder();
+        accountService.query(accountQueryForm, Pageable.unpaged()).getContent().forEach(account -> {sb.append("id:").append(account.getId()).append("\nname:").append(account.getName()).append("\nNotes:").append(account.getNotes()).append("\n");});
+
+        PayeeQueryForm payeeQueryForm = new PayeeQueryForm();
+        payeeQueryForm.setBookId(currentBookId);
+        payeeQueryForm.setCanExpense(true);
+        payeeQueryForm.setCanIncome(true);
+        StringBuilder sb2 = new StringBuilder();
+        payeeService.queryAll(payeeQueryForm).forEach(payeeDetails -> sb2.append(payeeDetails.toString()).append("\n"));
+        //todo 交易对象查出来是空的
+        //拼接最终系统prompt
+        String systemPrompt = String.format(AiSummaryUtil.getAddBallanceSystemPrompt(),sb.toString(),sb2.toString());
+        String result = addBalance.add(systemPrompt, input);
+
+
+        ObjectMapper mapper = new ObjectMapper();
+        try {
+            for (BalanceFlowAddForm form : mapper.readValue(result, new TypeReference<List<BalanceFlowAddForm>>() {
+            })) {
+                form.setCreateTime(System.currentTimeMillis());
+                //todo 增加智能记账ai返回调试
+                System.out.println(form.toString());
+                balanceFlowService.add(form);
+            }
+
+
+
+            return true;
+        }catch (Exception e){
+            //todo 解析失败重试
+            e.printStackTrace();
+        }
+
+        return false;
     }
 }
